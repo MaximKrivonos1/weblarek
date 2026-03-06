@@ -1,6 +1,6 @@
-import { IBuyer } from "../../../types";
+import { IBuyer, WrongUserData } from "../../types";
 
-export class Buyer implements IBuyer {
+export class Buyer {
   payment: 'card' | 'cash' | '' = '';
   email: string = '';
   phone: string = '';
@@ -40,18 +40,8 @@ export class Buyer implements IBuyer {
     this.address = ''
   }
 
-  isValidUserData(): {
-    payment?: 'не выбран вид оплаты',
-    address?: 'не указан адрес',
-    phone?: 'не указан номер телефона',
-    email?: 'не указан емеил'
-  } {
-    const errors: {
-      payment?: 'не выбран вид оплаты',
-      address?: 'не указан адрес',
-      phone?: 'не указан номер телефона',
-      email?: 'не указан емеил'
-    } = {}
+  isValidUserData(): WrongUserData {
+    const errors: WrongUserData = {}
     if (this.payment !== 'card' && this.payment !== 'cash') {
       errors.payment = 'не выбран вид оплаты';
     }

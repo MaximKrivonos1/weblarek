@@ -1,14 +1,14 @@
 import './scss/styles.scss';
-import { Products } from './components/base/Models/Products';
-import { Basket } from './components/base/Models/basket';
-import { Buyer } from './components/base/Models/Buyer';
-import { LarekApi } from './components/base/LarekApi';
+import { Products } from './components/Models/Products';
+import { Basket } from './components/Models/Basket';
+import { Buyer } from './components/Models/Buyer';
+import { LarekApi } from './components/LarekApi';
 import { Api } from './components/base/Api';
 import { apiProducts } from './utils/data';
 import { API_URL } from './utils/constants';
 
 
-const productsModel = new Products();
+let productsModel = new Products();
 productsModel.setProducts(apiProducts.items);
 console.log('Массив товаров из каталога: ', productsModel.getProducts())
 console.log('Получение товара по айди: ', productsModel.getProductById('854cef69-976d-4c2a-a18c-2aa45046c390'))
@@ -41,5 +41,10 @@ console.log('информация о покупателе:', buyerModel.getUserD
 const base = new Api(API_URL);
 const apiModel = new LarekApi(base);
 
-apiModel.getProductList().then((response) => productsModel.setProducts(response));
-console.log(productsModel);
+apiModel.getProductList().then((response) => {
+  productsModel.setProducts(response);
+  console.log('Полученный массив товаров:', productsModel.getProducts());
+}).catch((error) => {
+  console.error('Ошибка при получении списка товаров:', error);
+});
+

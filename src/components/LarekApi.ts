@@ -1,4 +1,4 @@
-import { IApi, IOrderResponse, IProduct, TOrderRequest } from "../../types";
+import { IApi, IOrderResponse, IProduct, TOrderRequest } from "../types";
 
 export class LarekApi {
   private api: IApi;
@@ -14,7 +14,7 @@ export class LarekApi {
 
   async orderProducts(order: TOrderRequest): Promise<IOrderResponse> {
     try {
-      const response = await this.api.post<IOrderResponse>('/order', order);
+      const response = await this.api.post<IOrderResponse>('/order/', order);
       return response;
     } catch (error) {
       console.error('Ошибка при оформлении заказа:', error);

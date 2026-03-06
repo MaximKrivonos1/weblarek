@@ -6,19 +6,26 @@ export interface IApi {
 }
 
 export interface IProduct {
-  id: string; 
-  description: string;
-  image: string;
-  title: string;
-  category: string;
-  price: number | null;
+    id: string;
+    description: string;
+    image: string;
+    title: string;
+    category: string;
+    price: number | null;
 }
 
 export interface IBuyer {
-  payment: 'card' | 'cash' | '';
-  email: string;
-  phone: string;
-  address: string;
+    payment: 'card' | 'cash' | '';
+    email: string;
+    phone: string;
+    address: string;
+}
+
+export type WrongUserData = {
+    payment?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
 }
 
 export type TOrderRequest = Pick<IBuyer, 'email' | 'phone' | 'address'> & {
