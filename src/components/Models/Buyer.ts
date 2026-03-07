@@ -1,10 +1,10 @@
 import { IBuyer, WrongUserData } from "../../types";
 
 export class Buyer {
-  payment: 'card' | 'cash' | '' = '';
-  email: string = '';
-  phone: string = '';
-  address: string = '';
+  private payment: 'card' | 'cash' | '' = '';
+  private email: string = '';
+  private phone: string = '';
+  private address: string = '';
 
   constructor() { }
 
