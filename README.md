@@ -59,6 +59,8 @@ Presenter - презентер содержит основную логику п
 
 Взаимодействие между классами обеспечивается использованием событийно-ориентированного подхода. Модели и Представления генерируют события при изменении данных или взаимодействии пользователя с приложением, а Презентер обрабатывает эти события используя методы как Моделей, так и Представлений.
 
+
+
 ### Базовый код
 
 #### Класс Component
@@ -207,3 +209,260 @@ address: string; - адрес покупателя
 `orderProducts(order: TOrderRequest): Promise<IOrderResponse>` - Выполняет POST-запрос к эндпоинту /order для оформления заказа. Отправляет на сервер данные о покупателе и выбранных товарах. Параметры:
 order: TOrderRequest - объект с данными заказа, включающий информацию о покупателе, общую сумму и массив ID товаров
 Возвращает: промис с результатом оформления заказа типа IOrderResponse
+
+###### Слой представления
+
+Класс Header, наследуется от класса Component. Рабостает с отображением значка корзины
+
+Конструктор класса:
+`constructor(events : IEvent, container: HTMlElement)` - принимает контейнер, в котором нахожится корзина
+
+Поля класса:
+`basketButton: HTMLButtonElement` - Элемент кнопка(корзина)
+`basketCounter: HTMlElement` - (счетчик товаров в корзине)
+
+Методы класса:
+`set counter(value: number): void` - принимает количество товаров в корзине.
+
+Интерфейс данных для сеттера:
+interface IHeader {
+  counter: number
+}
+
+---
+
+Класс Modal - модальное окно
+
+Конструктор класса:
+`constructor(container: HTMLElement, events: IEvents)` - принимает корневой контейнер модального окна и экземпляр брокера событий. Сам класс не принимает решение о закрытии модального окна, а только создаёт события для презентера.
+
+Поля класса:
+`closeButton: HTMLButtonElement` - кнопка закрытия модального окна  
+`contentElement: HTMLElement` - контейнер для отображения вложенного контента
+
+Методы класса:
+`set content(content: HTMLElement): void` - принимает HTML-элемент и вставляет его в область `.modal__content`  
+`open(): void` - открывает модальное окно, добавляя CSS-класс `modal_active`  
+`close(): void` - закрывает модальное окно и очищает контейнер с контентом  
+`render(data?: Partial<IModalData>): HTMLElement` - принимает данные для модального окна, вставляет контент и открывает модальное окно
+
+Интерфейс для данных, попадающих в сеттер и метод `render`.
+interface IModalData{
+  content: HTMLElement
+}
+
+---
+
+Класс Form - родительский класс для форм
+
+Наследуется от класса `Component`.
+
+Конструктор класса:
+`constructor(container: HTMLFormElement, events: IEvents)` - принимает контейнер формы и экземпляр брокера событий
+
+Поля класса:
+`submitButton: HTMLButtonElement` - кнопка отправки формы  
+`formErrors: HTMLElement` - элемент для вывода текста ошибок
+
+Методы класса:
+`set valid(value: boolean): void` - управляет доступностью submit-кнопки  
+`set errors(value: string): void` - устанавливает текст ошибок  
+`render(data?: Partial<T & IFormState>): HTMLElement` - базовый рендер формы  
+`onInputChange(field: keyof T, value: string): void` - создаёт событие изменения поля формы
+
+Интерфейсы и типы данных:
+`IFormState` - состояние формы:
+`valid: boolean` - валидность формы
+`errors: string` - текст ошибок
+
+При отправке формы класс создаёт событие `${this.container.name}:submit`, а при вводе в поле создаёт событие `form:change` с данными `{ form, field, value }`.
+
+---
+
+Класс OrderForm - класс для отображения формы заказа.
+
+Наследуется от класса `Form<TOrderForm>`.
+
+Поля класса:
+`paymentButtons: HTMLButtonElement[]` - кнопки выбора способа оплаты  
+`addressInput: HTMLInputElement` - поле адреса доставки
+
+Методы класса:
+`set payment(value: 'card' | 'cash' | ''): void` - подсвечивает активный способ оплаты  
+`set address(value: string): void` - устанавливает значение адреса
+
+Типы данных:
+`TOrderForm = Pick<IBuyer, 'payment' | 'address'>`
+
+При клике по кнопкам оплаты форма создаёт событие `form:change` для поля `payment`.
+
+---
+
+Класс ContactsForm - класс для отображения формы сбора информации.
+
+Наследуется от класса `Form<TContactsForm>`.
+
+Поля класса:
+`emailInput: HTMLInputElement` - поле email  
+`phoneInput: HTMLInputElement` - поле телефона
+
+Методы класса:
+`set email(value: string): void` - устанавливает значение email  
+`set phone(value: string): void` - устанавливает значение телефона
+
+Типы данных:
+`TContactsForm = Pick<IBuyer, 'email' | 'phone'>`
+
+---
+
+Класс Success - окно подтверждения покупки
+
+Наследуется от класса `Component<ISuccess>`.
+
+Поля класса:
+`closeButton: HTMLButtonElement` - кнопка закрытия окна  
+`descriptionElement: HTMLElement` - элемент для отображения суммы списания
+
+Методы класса:
+`set total(value: number): void` - выводит итоговую сумму заказа
+
+При нажатии на кнопку класс создаёт событие `success:close`.
+
+---
+
+Класс Card - родитель для карточек товара. Абстрактный класс.
+
+Конструктор класса:
+`constructor(container: HTMLElement)` - принимает контейнер карточки
+
+Поля класса:
+`titleElement: HTMLElement` - хранит элемент с названием товара
+`priceElement: HTMLElement` - хранит элемент с ценой товара
+
+Методы класса:
+`set price(value: number | null): void` - принимает стоимость товара. Если цена отсутствует, выводит текст о том, что цена не указана  
+`set title(value: string): void` - принимает название товара  
+`render(data?: Partial<T & TCard>): HTMLElement` - базовый метод рендера для всех карточек
+
+Типы данных:
+`TCard = Pick<IProduct, 'title' | 'price'>` - базовый набор данных для любой карточки товара
+
+---
+
+Класс CatalogCard - карточка в каталоге товаров
+
+Наследуется от класса `Card<TCatalogCard>`.
+
+Конструктор класса:
+`constructor(container: HTMLElement, actions?: Partial<ICatalogCardActions>)` - принимает контейнер карточки каталога и объект с обработчиками пользовательских действий
+
+Поля класса:
+`imageElement: HTMLImageElement` - элемент изображения товара  
+`categoryElement: HTMLElement` - элемент категории товара
+
+Методы класса:
+`set image(value: string): void` - устанавливает изображение товара с использованием `CDN_URL`  
+`set category(value: string): void` - устанавливает текст категории и CSS-класс категории
+
+Типы данных:
+`TCatalogCard = Pick<IProduct, 'image' | 'category'>` - данные, специфичные для карточки каталога  
+`ICatalogCardActions` - интерфейс для обработчиков действий карточки:
+`onClick: (event: MouseEvent) => void` - вызывается при клике по карточке
+
+Карточка не работает с моделями данных напрямую. При клике она вызывает переданный обработчик `onClick`, а дальнейшая логика обрабатывается в `main.ts` через брокер событий.
+
+---
+
+Класс PreviewCard - карточка в модальном окне
+
+Наследуется от класса `Card<TPreviewCard>`.
+
+Конструктор класса:
+`constructor(container: HTMLElement, events: IEvents)` - принимает контейнер карточки и экземпляр брокера событий
+
+Поля класса:
+`imageElement: HTMLImageElement` - элемент изображения товара  
+`categoryElement: HTMLElement` - элемент категории товара  
+`descriptionElement: HTMLElement` - элемент описания товара  
+`buttonElement: HTMLButtonElement` - кнопка действия с товаром
+
+Методы класса:
+`set image(value: string): void` - устанавливает изображение товара с использованием `CDN_URL`  
+`set category(value: string): void` - устанавливает название и CSS-класс категории  
+`set description(value: string): void` - устанавливает текст описания товара  
+`set buttonText(value: string): void` - устанавливает текст кнопки  
+`set buttonDisabled(value: boolean): void` - блокирует или разблокирует кнопку  
+`set isInBasket(value: boolean): void` - переключает сценарий действия кнопки
+
+Типы данных:
+`TPreviewCard = Pick<IProduct, 'image' | 'category' | 'description'> & {
+  buttonText: string;
+  buttonDisabled: boolean;
+  isInBasket: boolean;
+}` - данные, специфичные для карточки предпросмотра
+
+Класс `PreviewCard` не хранит данные товара и не изменяет модель корзины напрямую. При нажатии на кнопку он создаёт событие `preview:basket-add`, если товара ещё нет в корзине, и событие `preview:basket-remove`, если товар уже был добавлен.
+
+Если у товара нет цены, кнопка блокируется и отображает текст `Недоступно`.
+
+---
+
+Класс BasketCard - карточка товара в корзине
+
+Наследуется от класса `Card`.
+
+Конструктор класса:
+`constructor(container: HTMLElement, actions?: Partial<IBasketCardActions>)` - принимает контейнер карточки и объект с обработчиками пользовательских действий
+
+Поля класса:
+`buttonElement: HTMLButtonElement` - кнопка удаления товара из корзины
+
+Поведение:
+При клике по кнопке удаления вызывает переданный обработчик, который в `main.ts` создаёт событие `basket:delete`.
+
+---
+
+Класс BasketView - корзина товаров
+
+Наследуется от класса `Component<IBasketView>`.
+
+Поля класса:
+`contentList: HTMLUListElement` - список товаров корзины  
+`buttonOrder: HTMLButtonElement` - кнопка перехода к оформлению  
+`totalAmount: HTMLElement` - элемент общей стоимости
+
+Методы класса:
+`set content(value: HTMLLIElement[]): void` - рендерит список товаров корзины  
+`set total(value: number): void` - отображает итоговую стоимость
+
+Типы данных:
+`IBasketView`:
+`content: HTMLLIElement[]` - список карточек корзины
+`total: number` - общая стоимость корзины
+
+При нажатии на кнопку оформления создаёт событие `basket:order`.
+
+###### События
+
+События моделей:
+`catalog:changed` - изменение каталога товаров, создаётся в классе `Products`
+`product:selected` - выбор товара для предпросмотра, создаётся в классе `Products`
+`basket:changed` - изменение состава корзины, создаётся в классе `Basket`
+`buyer:changed` - изменение данных покупателя, создаётся в классе `Buyer`
+
+События представления и презентера:
+`basket:open` - корзина открыта, создаётся в классе `Header` в конструкторе
+`card:select` - выбор карточки товара в каталоге. Создаётся в `main.ts` из обработчика `onClick`, переданного в `CatalogCard`. В данных события передаётся `productId`
+`preview:basket-add` - добавление выбранного товара в корзину из карточки `PreviewCard`
+`preview:basket-remove` - удаление выбранного товара из корзины из карточки `PreviewCard`
+`basket:delete` - удаление товара из корзины, создаётся в классе `BasketCard` через обработчик, переданный из `main.ts`
+`basket:order` - переход к оформлению заказа, создаётся в классе `BasketView`
+`form:change` - изменение поля формы, создаётся в классе `Form`
+`order:submit` - отправка первого шага оформления, создаётся в классе `Form` для формы `order`
+`contacts:submit` - отправка второго шага оформления, создаётся в классе `Form` для формы `contacts`
+`order:success` - успешное оформление заказа, создаётся в `main.ts` после успешного ответа API
+`success:close` - закрытие окна успешного заказа, создаётся в классе `Success`
+`modal:close` - запрос на закрытие модального окна. Создаётся в классе `Modal` при клике по кнопке закрытия или по клику вне области модального контейнера
+
+###### Презентер
+В данном проекте роль презентера выполняет файл `src/main.ts`. В нем находится основная orchestration-логика приложения: подписка на события, связывание моделей и представлений, открытие модальных окон, переключение шагов оформления заказа и отправка заказа через API.
