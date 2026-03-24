@@ -37,7 +37,7 @@ export class PreviewCard extends Card<TPreviewCard> {
     this.categoryElement.classList.add(categoryMap[value as keyof typeof categoryMap] ?? '');
   }
 
-  set description(value: string){
+  set description(value: string) {
     this.descriptionElement.textContent = value;
   }
 
