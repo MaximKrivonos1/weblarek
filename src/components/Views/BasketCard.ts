@@ -1,6 +1,7 @@
 import { Card } from "./Card";
 import { ensureElement } from "../../utils/utils";
 import { IProduct } from "../../types";
+import { IEvents } from "../base/Events";
 
 type TBasketCard = Pick<IProduct, "title" | "price"> & {
   index: number;
@@ -14,7 +15,7 @@ export class BasketCard extends Card<TBasketCard> {
   protected buttonElement: HTMLButtonElement;
   protected indexElement: HTMLElement;
 
-  constructor(container: HTMLElement, actions?: Partial<IBasketCardActions>) {
+  constructor(container: HTMLElement, protected events: IEvents) {
     super(container);
 
     this.buttonElement = ensureElement<HTMLButtonElement>(
@@ -26,9 +27,10 @@ export class BasketCard extends Card<TBasketCard> {
       this.container,
     );
 
-    if (actions?.onClick) {
-      this.buttonElement.addEventListener("click", actions.onClick);
-    }
+    this.buttonElement.addEventListener("click", () => {
+      this.events.emit("basket:delete");
+    });
+
   }
 
   set index(value: number) {

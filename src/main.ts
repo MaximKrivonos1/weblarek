@@ -40,9 +40,18 @@ const successTemplate = ensureElement<HTMLTemplateElement>("#success");
 
 type TFormStep = "order" | "contacts";
 
-let currentFormStep: TFormStep | null = null;
-let orderForm: OrderForm | null = null;
-let contactsForm: ContactsForm | null = null;
+const orderForm = new OrderForm(
+  cloneTemplate<HTMLFormElement>(orderTemplate),
+  events,
+);
+const contactsForm = new ContactsForm(
+  cloneTemplate<HTMLFormElement>(contactsTemplate),
+  events,
+);
+const basketView = new BasketView(
+  cloneTemplate<HTMLElement>(basketTemplate),
+  events,
+);
 
 function formatErrors(errors: WrongUserData): string {
   return Object.values(errors).filter(Boolean).join(", ");
@@ -62,6 +71,11 @@ function getFormErrors(step: TFormStep): WrongUserData {
     email: errors.email,
     phone: errors.phone,
   };
+}
+
+function isFormValid(errors: WrongUserData): boolean {
+  return Object.keys(errors).filter((key) => errors[key as keyof WrongUserData])
+    .length === 0;
 }
 
 function updateHeader(): void {
@@ -91,17 +105,9 @@ function renderCatalog(): void {
 }
 
 function renderBasket(): HTMLElement {
-  const basketView = new BasketView(
-    cloneTemplate<HTMLElement>(basketTemplate),
-    events,
-  );
   const basketItems = basketModel.getBasket().map((item, index) => {
     const basketCard = new BasketCard(
-      cloneTemplate<HTMLLIElement>(basketCardTemplate),
-      {
-        onClick: () => events.emit("basket:delete", item),
-      },
-    );
+      cloneTemplate<HTMLLIElement>(basketCardTemplate), events);
 
     return basketCard.render({
       index: index + 1,
@@ -117,37 +123,25 @@ function renderBasket(): HTMLElement {
 }
 
 function renderOrderForm(): HTMLElement {
-  orderForm = new OrderForm(
-    cloneTemplate<HTMLFormElement>(orderTemplate),
-    events,
-  );
   const userData = buyerModel.getUserData();
   const errors = getFormErrors("order");
 
   return orderForm.render({
     payment: userData.payment,
     address: userData.address,
-    valid:
-      Object.keys(errors).filter((key) => errors[key as keyof WrongUserData])
-        .length === 0,
+    valid: isFormValid(errors),
     errors: formatErrors(errors),
   });
 }
 
 function renderContactsForm(): HTMLElement {
-  contactsForm = new ContactsForm(
-    cloneTemplate<HTMLFormElement>(contactsTemplate),
-    events,
-  );
   const userData = buyerModel.getUserData();
   const errors = getFormErrors("contacts");
 
   return contactsForm.render({
     email: userData.email,
     phone: userData.phone,
-    valid:
-      Object.keys(errors).filter((key) => errors[key as keyof WrongUserData])
-        .length === 0,
+    valid: isFormValid(errors),
     errors: formatErrors(errors),
   });
 }
@@ -172,7 +166,6 @@ function renderPreview(): HTMLElement | null {
     image: product.image,
     category: product.category,
     description: product.description,
-    isInBasket,
     buttonDisabled: !isAvailable,
     buttonText: !isAvailable
       ? "Недоступно"
@@ -204,40 +197,29 @@ events.on("product:selected", () => {
   });
 });
 
-events.on("preview:basket-add", () => {
+events.on("basket-toggle", () => {
   const selectedProduct = productsModel.getSelectedProduct();
 
   if (!selectedProduct || selectedProduct.price === null) {
     return;
   }
 
-  if (!basketModel.isProductInBasketById(selectedProduct.id)) {
+  if (basketModel.isProductInBasketById(selectedProduct.id)) {
+    basketModel.deleteProduct(selectedProduct);
+  } else {
     basketModel.addBasket(selectedProduct);
   }
 
   modal.close();
 });
 
-events.on("preview:basket-remove", () => {
-  const selectedProduct = productsModel.getSelectedProduct();
-
-  if (!selectedProduct) {
-    return;
-  }
-
-  basketModel.deleteProduct(selectedProduct);
-  modal.close();
-});
-
 events.on<IProduct>("basket:delete", (product) => {
   basketModel.deleteProduct(product);
-  modal.render({
-    content: renderBasket(),
-  });
 });
 
 events.on("basket:changed", () => {
   updateHeader();
+  renderBasket();
 });
 
 events.on("catalog:changed", () => {
@@ -273,44 +255,17 @@ events.on<{ form: string; field: string; value: string }>(
 );
 
 events.on("buyer:changed", () => {
-  if (currentFormStep === "order" && orderForm) {
-    const userData = buyerModel.getUserData();
-    const errors = getFormErrors("order");
-
-    orderForm.render({
-      payment: userData.payment,
-      address: userData.address,
-      valid:
-        Object.keys(errors).filter((key) => errors[key as keyof WrongUserData])
-          .length === 0,
-      errors: formatErrors(errors),
-    });
-  }
-
-  if (currentFormStep === "contacts" && contactsForm) {
-    const userData = buyerModel.getUserData();
-    const errors = getFormErrors("contacts");
-
-    contactsForm.render({
-      email: userData.email,
-      phone: userData.phone,
-      valid:
-        Object.keys(errors).filter((key) => errors[key as keyof WrongUserData])
-          .length === 0,
-      errors: formatErrors(errors),
-    });
-  }
+  renderOrderForm();
+  renderContactsForm();
 });
 
 events.on("basket:open", () => {
-  currentFormStep = null;
   modal.render({
-    content: renderBasket(),
+    content: basketView.render(),
   });
 });
 
 events.on("basket:order", () => {
-  currentFormStep = "order";
   modal.render({
     content: renderOrderForm(),
   });
@@ -319,19 +274,10 @@ events.on("basket:order", () => {
 events.on("order:submit", () => {
   const errors = getFormErrors("order");
 
-  if (
-    Object.keys(errors).filter((key) => errors[key as keyof WrongUserData])
-      .length > 0
-  ) {
-    orderForm?.render({
-      valid: false,
-      errors: formatErrors(errors),
-    });
-
+  if (!isFormValid(errors)) {
     return;
   }
 
-  currentFormStep = "contacts";
   modal.render({
     content: renderContactsForm(),
   });
@@ -340,15 +286,7 @@ events.on("order:submit", () => {
 events.on("contacts:submit", async () => {
   const errors = getFormErrors("contacts");
 
-  if (
-    Object.keys(errors).filter((key) => errors[key as keyof WrongUserData])
-      .length > 0
-  ) {
-    contactsForm?.render({
-      valid: false,
-      errors: formatErrors(errors),
-    });
-
+  if (!isFormValid(errors)) {
     return;
   }
 
@@ -364,10 +302,9 @@ events.on("contacts:submit", async () => {
 
   try {
     const response = await apiModel.orderProducts(orderData);
-    currentFormStep = null;
     events.emit("order:success", { total: response.total });
   } catch (error) {
-    contactsForm?.render({
+    contactsForm.render({
       valid: true,
       errors: "Не удалось оформить заказ",
     });
@@ -389,16 +326,15 @@ events.on<{ total: number }>("order:success", ({ total }) => {
 });
 
 events.on("success:close", () => {
-  currentFormStep = null;
   modal.close();
 });
 
 events.on("modal:close", () => {
-  currentFormStep = null;
   modal.close();
 });
 
 productsModel.setProducts(apiProducts.items);
+renderBasket();
 updateHeader();
 renderCatalog();
 

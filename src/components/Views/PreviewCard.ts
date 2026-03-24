@@ -7,7 +7,6 @@ import { categoryMap, CDN_URL } from "../../utils/constants";
 export type TPreviewCard = Pick<IProduct, 'image' | 'category' | 'description'> & {
   buttonText: string;
   buttonDisabled: boolean;
-  isInBasket: boolean;
 }
 
 export class PreviewCard extends Card<TPreviewCard> {
@@ -15,7 +14,6 @@ export class PreviewCard extends Card<TPreviewCard> {
   protected categoryElement: HTMLElement;
   protected descriptionElement: HTMLElement;
   protected buttonElement: HTMLButtonElement;
-  protected isProductInBasket = false;
 
   constructor(container: HTMLElement, protected events: IEvents) {
     super(container);
@@ -24,7 +22,7 @@ export class PreviewCard extends Card<TPreviewCard> {
     this.descriptionElement = ensureElement<HTMLElement>('.card__text', this.container);
     this.buttonElement = ensureElement<HTMLButtonElement>('.card__button', this.container);
     this.buttonElement.addEventListener('click', () => {
-      this.events.emit(this.isProductInBasket ? 'preview:basket-remove' : 'preview:basket-add');
+      this.events.emit('basket-toggle');
     });
   }
 
@@ -47,9 +45,5 @@ export class PreviewCard extends Card<TPreviewCard> {
 
   set buttonDisabled(value: boolean) {
     this.buttonElement.disabled = value;
-  }
-
-  set isInBasket(value: boolean) {
-    this.isProductInBasket = value;
   }
 }
